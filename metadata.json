@@ -1,5 +1,0 @@
-{
-  "name": "VESA DSC Config & PPS Generator",
-  "description": "A professional tool for hardware engineers to convert between Linux Kernel drm_dsc_config structures and 128-byte Picture Parameter Set (PPS) buffers, featuring real-time encoding, decoding, and side-by-side comparison.",
-  "requestFramePermissions": []
-}
