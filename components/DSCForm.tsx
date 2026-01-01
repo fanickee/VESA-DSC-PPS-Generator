@@ -83,7 +83,7 @@ const DSCForm: React.FC<DSCFormProps> = ({
       <div className="col-span-full border-b pb-1 mb-2 font-bold text-slate-800 text-xs uppercase tracking-widest">General Settings</div>
       <InputField label="Major Version" field="dsc_version_major" />
       <InputField label="Minor Version" field="dsc_version_minor" />
-      <InputField label="BPC (8/10/12/14)" field="bits_per_component" />
+      <InputField label="BPC (8/10/12/14/16)" field="bits_per_component" />
       <InputField label="BPP (Logical * 16)" field="bits_per_pixel" />
       <InputField label="Pic Width" field="pic_width" />
       <InputField label="Pic Height" field="pic_height" />
