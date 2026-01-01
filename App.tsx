@@ -123,15 +123,10 @@ const App: React.FC = () => {
   }, [activeField, activeFieldsFromByte]);
 
   // Highlighting Logic: Field -> Bytes
-  // We use just the hovered form field to highlight bytes, OR if a byte is selected we highlight that byte
-  // But usually HexViewer highlights are driven by `highlightIndices` prop.
-  // We want to highlight bytes corresponding to the hovered form field.
   const highlightedBytes = useMemo(() => {
     if (activeField) {
       return FIELD_TO_PPS_MAP[activeField] || [];
     }
-    // If no form field is hovered, we don't necessarily highlight bytes unless needed.
-    // However, if a byte is selected in viewer, it highlights itself via CSS/state in HexViewer (border).
     return [];
   }, [activeField]);
 
@@ -153,7 +148,7 @@ const App: React.FC = () => {
           </button>
           <button 
             onClick={() => exportCHeader()}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow-md transition-colors"
+            className="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow-md transition-colors"
           >
             <i className="fa-solid fa-download mr-2"></i>Export C Header
           </button>
@@ -194,7 +189,7 @@ const App: React.FC = () => {
       <div className={`grid gap-8 ${compareMode ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
         {/* Config A Side */}
         <section className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-4 z-30">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-0 z-30">
             <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
               <h2 className="font-bold text-slate-700">Config A (Master)</h2>
               <button 
@@ -251,9 +246,9 @@ const App: React.FC = () => {
         {/* Config B Side */}
         {compareMode && (
           <section className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-4 z-30">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-0 z-30">
               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-                <h2 className="font-bold text-slate-700 text-blue-600">Config B (Target)</h2>
+                <h2 className="font-bold text-slate-700">Config B (Target)</h2>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setIsPastingB(!isPastingB)}

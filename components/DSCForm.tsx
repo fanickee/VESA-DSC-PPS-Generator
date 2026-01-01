@@ -73,6 +73,10 @@ const DSCForm: React.FC<DSCFormProps> = ({
   const isThreshDiff = highlightKeys.includes('rc_buf_thresh');
   const isRangesDiff = highlightKeys.includes('rc_range_params');
 
+  // Logic to show DSC 1.2 fields if version >= 2 OR if any of those fields are actively selected in Hex Viewer
+  const dsc12Fields = ['second_line_bpg_offset', 'nsl_bpg_offset', 'second_line_offset_adj', 'native_422', 'native_420'];
+  const showDsc12 = config.dsc_version_minor >= 2 || activeFields.some(f => dsc12Fields.includes(f));
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
       {/* General Settings */}
@@ -116,9 +120,12 @@ const DSCForm: React.FC<DSCFormProps> = ({
       <InputField label="Slice Chunk Size" field="slice_chunk_size" />
 
       {/* DSC 1.2 Settings */}
-      {config.dsc_version_minor >= 2 && (
+      {showDsc12 && (
         <>
-          <div className="col-span-full border-b pb-1 mb-2 mt-4 font-bold text-slate-800 text-xs uppercase tracking-widest">DSC 1.2 Specific Settings</div>
+          <div className="col-span-full border-b pb-1 mb-2 mt-4 font-bold text-slate-800 text-xs uppercase tracking-widest">
+            DSC 1.2 Specific Settings
+            {config.dsc_version_minor < 2 && <span className="ml-2 text-xs text-orange-500 normal-case font-normal">(Visible due to selection)</span>}
+          </div>
           <InputField label="2nd Line BPG Offset" field="second_line_bpg_offset" />
           <InputField label="NSL BPG Offset" field="nsl_bpg_offset" />
           <InputField label="2nd Line Offset Adj" field="second_line_offset_adj" />

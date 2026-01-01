@@ -61,8 +61,8 @@ const HexViewer: React.FC<HexViewerProps> = ({
   }
 
   return (
-    <div className="bg-slate-900 text-slate-300 p-3 rounded-b-lg font-mono text-xs shadow-inner relative group">
-      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+    <div className="bg-slate-900 text-slate-300 p-2 rounded-b-lg font-mono text-xs shadow-inner relative group">
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
         {rows.map((row, rowIdx) => (
           <React.Fragment key={rowIdx}>
             <div className="text-slate-500 border-r border-slate-700 pr-2 flex items-center h-6 select-none">
@@ -97,10 +97,10 @@ const HexViewer: React.FC<HexViewerProps> = ({
                         onChange={(e) => setInputValue(e.target.value.slice(0, 2))}
                         onKeyDown={handleInput}
                         onBlur={submitEdit}
-                        className="bg-transparent w-full h-full text-center focus:outline-none p-0 m-0 uppercase font-bold caret-black"
+                        className="bg-transparent w-full h-full text-sm text-center leading-none focus:outline-none p-0 m-0 uppercase font-bold caret-black"
                       />
                     ) : (
-                      <span className="leading-none pt-[1px] select-none">
+                      <span className="text-sm leading-none select-none">
                         {byte.toString(16).padStart(2, '0').toUpperCase()}
                       </span>
                     )}

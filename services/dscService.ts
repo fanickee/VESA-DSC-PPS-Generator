@@ -143,19 +143,24 @@ export function encodeDscToPPS(dsc: DrmDscConfig, ppsId: number = 0): Uint8Array
     buf[offset++] = b1;
   }
 
-  // PPS88-93: DSC 1.2 specific
+  // PPS88-93: DSC 1.2 specific logic
+  // Matched to C code: if (dsc->dsc_version_minor == 0x2)
   if (dsc.dsc_version_minor >= 0x02) {
     let nativeData = 0;
-    if (dsc.native_422) nativeData = 0x01;
-    else if (dsc.native_420) nativeData = 0x02;
-    buf[offset++] = nativeData; // PPS88
+    if (dsc.native_422) {
+      nativeData = 0x01; // BIT(0)
+    } else if (dsc.native_420) {
+      nativeData = 0x02; // BIT(1)
+    }
+    
+    buf[offset++] = nativeData;                 // PPS88
     buf[offset++] = dsc.second_line_bpg_offset; // PPS89
 
     buf[offset++] = (dsc.nsl_bpg_offset >> 8) & 0xFF; // PPS90
-    buf[offset++] = dsc.nsl_bpg_offset & 0xFF; // PPS91
+    buf[offset++] = dsc.nsl_bpg_offset & 0xFF;        // PPS91
 
     buf[offset++] = (dsc.second_line_offset_adj >> 8) & 0xFF; // PPS92
-    buf[offset++] = dsc.second_line_offset_adj & 0xFF; // PPS93
+    buf[offset++] = dsc.second_line_offset_adj & 0xFF;        // PPS93
   }
 
   return buf;
@@ -339,6 +344,7 @@ export const PPS_BYTE_TO_FIELDS: Record<number, string[]> = {
   41: ["rc_quant_incr_limit0"],
   42: ["rc_quant_incr_limit1"],
   43: ["rc_tgt_offset_high", "rc_tgt_offset_low"],
+  // DSC 1.2 specific fields
   88: ["native_422", "native_420"],
   89: ["second_line_bpg_offset"],
   90: ["nsl_bpg_offset"],
@@ -376,12 +382,9 @@ Object.entries(PPS_BYTE_TO_FIELDS).forEach(([byteIdxStr, fields]) => {
 });
 
 /**
- * Legacy support / Alias for compatibility if needed.
- * But we primarily use PPS_BYTE_TO_FIELDS now.
+ * Legacy support alias
  */
 export const PPS_TO_FIELD_MAP: Record<number, string> = {};
-// We don't populate this one anymore as it cannot support 1:N mapping correctly.
-// The App component should assume PPS_BYTE_TO_FIELDS logic.
 
 /**
  * Compare two configs and return list of different keys.
@@ -393,7 +396,7 @@ export function compareDscConfigs(a: DrmDscConfig, b: DrmDscConfig): string[] {
   for (const key of keys) {
     const valA = a[key];
     const valB = b[key];
-    
+
     if (Array.isArray(valA) && Array.isArray(valB)) {
       if (JSON.stringify(valA) !== JSON.stringify(valB)) {
         diffs.push(key);
