@@ -9,14 +9,18 @@ import {
   FIELD_TO_PPS_MAP,
   PPS_BYTE_TO_FIELDS
 } from './services/dscService';
+import '@fortawesome/fontawesome-free/css/all.min.css';
 import DSCForm from './components/DSCForm';
 import HexViewer from './components/HexViewer';
-import '@fortawesome/fontawesome-free/css/all.min.css';
+import FieldInfoPanel from './components/FieldInfoPanel';
 
 const App: React.FC = () => {
   const [config, setConfig] = useState<DrmDscConfig>(createEmptyDscConfig());
   const [ppsBuffer, setPpsBuffer] = useState<Uint8Array>(new Uint8Array(SDE_DSC_PPS_SIZE));
-  
+
+  // Language State
+  const [language, setLanguage] = useState<'en' | 'zh'>('en');
+
   // Highlighting State
   const [activeField, setActiveField] = useState<string | null>(null);
   const [hoveredByteIdx, setHoveredByteIdx] = useState<number | null>(null);
@@ -130,181 +134,203 @@ const App: React.FC = () => {
     return [];
   }, [activeField]);
 
+  // Determine which fields to show info for
+  // Priority: 
+  // 1. Hovered Form Field (Single)
+  // 2. Selected Byte (Multiple)
+  // 3. Hovered Byte (Multiple)
+  const currentInfoFields = useMemo(() => {
+    if (activeField) return [activeField];
+    if (activeFieldsFromByte.length > 0) return activeFieldsFromByte;
+    return [];
+  }, [activeField, activeFieldsFromByte]);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            VESA DSC <span className="text-blue-600">PPS Generator</span>
-          </h1>
-          <p className="text-slate-500 mt-1">Configure, Encode, Decode, and Compare VESA Display Stream Compression PPS Payloads.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={() => setCompareMode(!compareMode)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${compareMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-200 hover:bg-slate-300'}`}
-          >
-            <i className="fa-solid fa-code-compare mr-2"></i> {compareMode ? 'Disable Comparison' : 'Enable Comparison'}
-          </button>
-          <button 
-            onClick={() => exportCHeader()}
-            className="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow-md transition-colors"
-          >
-            <i className="fa-solid fa-download mr-2"></i>Export C Header
-          </button>
-        </div>
-      </header>
+    <div className="bg-slate-50 min-h-screen pb-48">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              VESA DSC <span className="text-blue-600">PPS Generator</span>
+            </h1>
+            <p className="text-slate-500 mt-1">Configure, Encode, Decode, and Compare VESA Display Stream Compression PPS Payloads.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <i className="fa-solid fa-language mr-2"></i> {language === 'en' ? '中文' : 'English'}
+            </button>
+            <button 
+              onClick={() => setCompareMode(!compareMode)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${compareMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-200 hover:bg-slate-300'}`}
+            >
+              <i className="fa-solid fa-code-compare mr-2"></i> {compareMode ? 'Disable Comparison' : 'Enable Comparison'}
+            </button>
+            <button 
+              onClick={() => exportCHeader()}
+              className="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow-md transition-colors"
+            >
+              <i className="fa-solid fa-download mr-2"></i>Export C Header
+            </button>
+          </div>
+        </header>
 
-      {/* Comparison Status */}
-      {compareMode && (
-        <div className="mb-8 w-full transition-all animate-in fade-in zoom-in duration-300">
-          {differences.length > 0 ? (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center shadow-sm w-full">
-              <h3 className="text-red-800 font-extrabold text-xl mb-4 flex items-center justify-center">
-                <i className="fa-solid fa-triangle-exclamation mr-3 text-2xl"></i>
-                Found {differences.length} Differences
-              </h3>
-              <div className="flex justify-center">
-                <ul className="text-sm text-red-700 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-2 max-w-5xl text-left font-mono">
-                  {differences.map(key => (
-                    <li key={key} className="flex items-center">
-                      <span className="w-1.5 h-1.5 bg-red-400 rounded-full mr-2"></span>
-                      {key}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center shadow-sm w-full">
-              <p className="text-emerald-800 font-extrabold text-xl flex items-center justify-center">
-                <i className="fa-solid fa-circle-check mr-3 text-2xl"></i>
-                Configs A and B are identical!
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className={`grid gap-8 ${compareMode ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-        {/* Config A Side */}
-        <section className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-0 z-30">
-            <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-              <h2 className="font-bold text-slate-700">Config A (Master)</h2>
-              <button 
-                onClick={() => setIsPasting(!isPasting)}
-                className={`text-xs px-2 py-1 rounded border transition-colors ${isPasting ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-              >
-                <i className="fa-solid fa-paste mr-1"></i> Quick Import Hex
-              </button>
-            </div>
-
-            {isPasting && (
-              <div className="p-4 bg-blue-50 border-b border-blue-100 animate-in fade-in slide-in-from-top-2">
-                <textarea 
-                  autoFocus
-                  value={pasteValue}
-                  onChange={(e) => setPasteValue(e.target.value)}
-                  placeholder="Paste PPS Hex string..."
-                  className="w-full h-24 p-2 text-xs font-mono bg-white border border-blue-200 rounded"
-                />
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-[10px] font-bold text-slate-500">{detectedByteCount} / 128 bytes</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => setIsPasting(false)} className="text-xs px-2 py-1 text-slate-500">Cancel</button>
-                    <button onClick={handleQuickImport} className="text-xs px-3 py-1 bg-blue-600 text-white rounded">Import</button>
-                  </div>
+        {/* Comparison Status */}
+        {compareMode && (
+          <div className="mb-8 w-full transition-all animate-in fade-in zoom-in duration-300">
+            {differences.length > 0 ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center shadow-sm w-full">
+                <h3 className="text-red-800 font-extrabold text-xl mb-4 flex items-center justify-center">
+                  <i className="fa-solid fa-triangle-exclamation mr-3 text-2xl"></i>
+                  Found {differences.length} Differences
+                </h3>
+                <div className="flex justify-center">
+                  <ul className="text-sm text-red-700 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-2 max-w-5xl text-left font-mono">
+                    {differences.map(key => (
+                      <li key={key} className="flex items-center">
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full mr-2"></span>
+                        {key}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center shadow-sm w-full">
+                <p className="text-emerald-800 font-extrabold text-xl flex items-center justify-center">
+                  <i className="fa-solid fa-circle-check mr-3 text-2xl"></i>
+                  Configs A and B are identical!
+                </p>
               </div>
             )}
-
-            <HexViewer 
-              buffer={ppsBuffer} 
-              onChange={handleBufferChange} 
-              diffBuffer={compareMode ? ppsBufferB : undefined} 
-              highlightIndices={highlightedBytes}
-              onHoverByte={setHoveredByteIdx}
-              onSelect={(idx) => { setSelectedByteIdx(idx); setSelectedByteIdxB(null); }}
-            />
           </div>
+        )}
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-              <h2 className="font-bold text-slate-700 uppercase tracking-tight text-xs">drm_dsc_config Settings (A)</h2>
-            </div>
-            <DSCForm 
-              config={config} 
-              onChange={setConfig} 
-              highlightKeys={compareMode ? differences : []} 
-              activeFields={allActiveFields}
-              onHoverField={setActiveField}
-            />
-          </div>
-        </section>
-
-        {/* Config B Side */}
-        {compareMode && (
+        <div className={`grid gap-8 ${compareMode ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Config A Side */}
           <section className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-0 z-30">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-1 z-30">
               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-                <h2 className="font-bold text-slate-700">Config B (Target)</h2>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setIsPastingB(!isPastingB)}
-                    className="text-xs px-2 py-1 rounded border bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
-                  >
-                    Import B
-                  </button>
-                  <button onClick={() => setConfigB({ ...config })} className="text-[10px] px-2 py-1 bg-slate-200 rounded hover:bg-slate-300">Clone A</button>
-                </div>
+                <h2 className="font-bold text-slate-700">Config A (Master)</h2>
+                <button 
+                  onClick={() => setIsPasting(!isPasting)}
+                  className={`text-xs px-2 py-1 rounded border transition-colors ${isPasting ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <i className="fa-solid fa-paste mr-1"></i> Quick Import Hex
+                </button>
               </div>
-              
-              {isPastingB && (
+
+              {isPasting && (
                 <div className="p-4 bg-blue-50 border-b border-blue-100 animate-in fade-in slide-in-from-top-2">
                   <textarea 
                     autoFocus
-                    value={pasteValueB}
-                    onChange={(e) => setPasteValueB(e.target.value)}
-                    placeholder="Paste Config B PPS Hex..."
+                    value={pasteValue}
+                    onChange={(e) => setPasteValue(e.target.value)}
+                    placeholder="Paste PPS Hex string..."
                     className="w-full h-24 p-2 text-xs font-mono bg-white border border-blue-200 rounded"
                   />
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-[10px] font-bold text-slate-500">{detectedByteCountB} / 128 bytes</span>
-                    <button onClick={handleQuickImportB} className="text-xs px-3 py-1 bg-blue-600 text-white rounded font-medium">Apply B</button>
+                    <span className="text-[10px] font-bold text-slate-500">{detectedByteCount} / 128 bytes</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setIsPasting(false)} className="text-xs px-2 py-1 text-slate-500">Cancel</button>
+                      <button onClick={handleQuickImport} className="text-xs px-3 py-1 bg-blue-600 text-white rounded">Import</button>
+                    </div>
                   </div>
                 </div>
               )}
 
               <HexViewer 
-                buffer={ppsBufferB} 
-                onChange={handleBufferBChange} 
-                diffBuffer={ppsBuffer} 
+                buffer={ppsBuffer} 
+                onChange={handleBufferChange} 
+                diffBuffer={compareMode ? ppsBufferB : undefined} 
                 highlightIndices={highlightedBytes}
                 onHoverByte={setHoveredByteIdx}
-                onSelect={(idx) => { setSelectedByteIdxB(idx); setSelectedByteIdx(null); }}
+                onSelect={(idx) => { setSelectedByteIdx(idx); setSelectedByteIdxB(null); }}
               />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
-                <h2 className="font-bold text-slate-700 uppercase tracking-tight text-xs">Comparison Details (B)</h2>
+                <h2 className="font-bold text-slate-700 uppercase tracking-tight text-xs">drm_dsc_config Settings (A)</h2>
               </div>
               <DSCForm 
-                config={configB} 
-                onChange={setConfigB} 
-                highlightKeys={differences} 
+                config={config} 
+                onChange={setConfig} 
+                highlightKeys={compareMode ? differences : []} 
                 activeFields={allActiveFields}
                 onHoverField={setActiveField}
               />
             </div>
           </section>
-        )}
-      </div>
 
-      <footer className="mt-12 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm">
-        <p>Bidirectional PPS Mapping Engine v2.0 • VESA DSC 1.1/1.2 Compliant</p>
-      </footer>
+          {/* Config B Side */}
+          {compareMode && (
+            <section className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-1 z-30">
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                  <h2 className="font-bold text-slate-700 text-blue-600">Config B (Target)</h2>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsPastingB(!isPastingB)}
+                      className="text-xs px-2 py-1 rounded border bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+                    >
+                      Import B
+                    </button>
+                    <button onClick={() => setConfigB({ ...config })} className="text-[10px] px-2 py-1 bg-slate-200 rounded hover:bg-slate-300">Clone A</button>
+                  </div>
+                </div>
+                
+                {isPastingB && (
+                  <div className="p-4 bg-blue-50 border-b border-blue-100 animate-in fade-in slide-in-from-top-2">
+                    <textarea 
+                      autoFocus
+                      value={pasteValueB}
+                      onChange={(e) => setPasteValueB(e.target.value)}
+                      placeholder="Paste Config B PPS Hex..."
+                      className="w-full h-24 p-2 text-xs font-mono bg-white border border-blue-200 rounded"
+                    />
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-[10px] font-bold text-slate-500">{detectedByteCountB} / 128 bytes</span>
+                      <button onClick={handleQuickImportB} className="text-xs px-3 py-1 bg-blue-600 text-white rounded font-medium">Apply B</button>
+                    </div>
+                  </div>
+                )}
+
+                <HexViewer 
+                  buffer={ppsBufferB} 
+                  onChange={handleBufferBChange} 
+                  diffBuffer={ppsBuffer} 
+                  highlightIndices={highlightedBytes}
+                  onHoverByte={setHoveredByteIdx}
+                  onSelect={(idx) => { setSelectedByteIdxB(idx); setSelectedByteIdx(null); }}
+                />
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-3">
+                  <h2 className="font-bold text-slate-700 uppercase tracking-tight text-xs">Comparison Details (B)</h2>
+                </div>
+                <DSCForm 
+                  config={configB} 
+                  onChange={setConfigB} 
+                  highlightKeys={differences} 
+                  activeFields={allActiveFields}
+                  onHoverField={setActiveField}
+                />
+              </div>
+            </section>
+          )}
+        </div>
+
+        <footer className="mt-12 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm">
+          <p>Bidirectional PPS Mapping Engine v2.0 • VESA DSC 1.1/1.2 Compliant</p>
+        </footer>
+      </div>
+      
+      {/* Field Info Panel */}
+      <FieldInfoPanel fieldKeys={currentInfoFields} language={language} />
     </div>
   );
 };
